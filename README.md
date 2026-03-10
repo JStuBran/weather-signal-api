@@ -332,3 +332,65 @@ main.py
 ## License
 
 MIT
+
+---
+
+## 🛠 MCP Integration
+
+The Weather Signal API is **MCP-compatible** — discoverable and callable by Claude, Cursor, and any MCP-enabled AI client via an MCP-to-REST bridge.
+
+An `mcp.json` file at the root of this repo describes both tools (forecast and signal). MCP hosts use this for automatic tool discovery.
+
+### Add to Claude Desktop
+
+Edit `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
+
+```json
+{
+  "mcpServers": {
+    "weather-signal": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://weather-signal.up.railway.app/mcp"
+      ]
+    }
+  }
+}
+```
+
+### Add to Cursor
+
+In Cursor settings → **MCP Tools** → **Add Tool**:
+
+```json
+{
+  "name": "weather-signal",
+  "url": "https://weather-signal.up.railway.app",
+  "schema": "https://weather-signal.up.railway.app/mcp.json"
+}
+```
+
+### Available MCP Tools
+
+| Tool | Endpoint | Cost |
+|---|---|---|
+| `get_weather_forecast` | `GET /api/forecast` | Free |
+| `get_polymarket_signal` | `POST /api/signal` | $0.05 USDC |
+
+### Example Agent Usage
+
+Once configured, Claude or any MCP client can call:
+
+```
+Use weather-signal to get the forecast for London on 2026-03-15,
+then generate a BUY/SELL signal for a Polymarket market with
+threshold 12°C (above), with market YES probability at 0.40.
+```
+
+The agent will automatically chain `get_weather_forecast` → `get_polymarket_signal` and return the full signal breakdown.
+
+### x402 Payment Note
+
+The `get_weather_forecast` tool is **free**. The `get_polymarket_signal` tool costs **$0.05 USDC** per call via x402 on Base mainnet. For local development, deploy with `PAYMENT_REQUIRED=false`.

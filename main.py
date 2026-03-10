@@ -335,6 +335,46 @@ async def health():
     return {"status": "ok", "version": VERSION, "cities": list(CITIES.keys())}
 
 
+@app.get("/mcp")
+@app.get("/mcp.json")
+async def mcp_manifest():
+    """MCP (Model Context Protocol) manifest — enables agentic tool discovery by Claude, Cursor, etc."""
+    import json
+    from pathlib import Path
+    from fastapi.responses import JSONResponse
+
+    mcp_path = Path(__file__).parent / "mcp.json"
+    if mcp_path.exists():
+        return JSONResponse(content=json.loads(mcp_path.read_text()))
+    # Inline fallback manifest
+    base_url = "https://weather-signal.up.railway.app"
+    return JSONResponse(content={
+        "schema_version": "v1",
+        "name_for_model": "weather_signal_api",
+        "description_for_model": (
+            "Get bias-corrected weather forecasts and BUY/SELL trading signals for Polymarket weather markets. "
+            "Forecast is free; signal costs $0.05 USDC via x402 on Base mainnet. "
+            f"Supported cities: {', '.join(CITIES.keys())}."
+        ),
+        "api": {
+            "type": "openapi",
+            "url": f"{base_url}/openapi.json",
+        },
+        "tools": [
+            {
+                "name": "get_weather_forecast",
+                "description": "Get bias-corrected max temperature for a city on a date. Free.",
+                "endpoint": {"method": "GET", "path": "/api/forecast", "base_url": base_url},
+            },
+            {
+                "name": "get_polymarket_signal",
+                "description": "Generate BUY_YES/BUY_NO/NO_EDGE signal for a Polymarket weather market. $0.05 USDC.",
+                "endpoint": {"method": "POST", "path": "/api/signal", "base_url": base_url},
+            },
+        ],
+    })
+
+
 @app.get("/api/forecast", response_model=ForecastResponse)
 async def forecast(
     city: str = Query(..., description="City name (e.g. London, Seoul)"),

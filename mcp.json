@@ -1,0 +1,142 @@
+{
+  "schema_version": "v1",
+  "name_for_human": "Weather Signal API",
+  "name_for_model": "weather_signal_api",
+  "description_for_human": "Bias-corrected temperature forecasts and Polymarket BUY/SELL signals for weather markets. Powered by Open-Meteo.",
+  "description_for_model": "Use this tool to get bias-corrected weather forecasts and generate BUY/SELL trading signals for Polymarket weather prediction markets. The forecast endpoint is free; the signal endpoint requires x402 USDC payment ($0.05) on Base mainnet. Supports 8 cities: Seoul, London, New York City, Wellington, Buenos Aires, Dallas, Ankara, Paris.",
+  "auth": {
+    "type": "none"
+  },
+  "api": {
+    "type": "openapi",
+    "url": "https://weather-signal.up.railway.app/openapi.json"
+  },
+  "tools": [
+    {
+      "name": "get_weather_forecast",
+      "description": "Get the bias-corrected maximum temperature forecast for a supported city on a given date. Free — no payment required. Supported cities: Seoul, London, New York City, Wellington, Buenos Aires, Dallas, Ankara, Paris.",
+      "endpoint": {
+        "method": "GET",
+        "path": "/api/forecast",
+        "base_url": "https://weather-signal.up.railway.app"
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "city": {
+            "type": "string",
+            "description": "City name. Must be one of: Seoul, London, New York City, Wellington, Buenos Aires, Dallas, Ankara, Paris",
+            "enum": ["Seoul", "London", "New York City", "Wellington", "Buenos Aires", "Dallas", "Ankara", "Paris"]
+          },
+          "date": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "description": "Forecast date in YYYY-MM-DD format"
+          }
+        },
+        "required": ["city", "date"]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "city": { "type": "string" },
+          "date": { "type": "string" },
+          "temperature": { "type": "number", "description": "Bias-corrected max temperature" },
+          "unit": { "type": "string", "enum": ["celsius", "fahrenheit"] },
+          "bias_applied": { "type": "number" },
+          "raw_temperature": { "type": "number" }
+        }
+      }
+    },
+    {
+      "name": "get_polymarket_signal",
+      "description": "Generate a BUY_YES, BUY_NO, or NO_EDGE trading signal for a Polymarket weather market. Uses sigmoidal probability model against bias-corrected forecasts. Requires x402 USDC payment ($0.05 on Base mainnet).",
+      "endpoint": {
+        "method": "POST",
+        "path": "/api/signal",
+        "base_url": "https://weather-signal.up.railway.app"
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "market": {
+            "type": "object",
+            "description": "Polymarket weather market object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Unique market identifier"
+              },
+              "question": {
+                "type": "string",
+                "description": "Human-readable market question"
+              },
+              "city": {
+                "type": "string",
+                "enum": ["Seoul", "London", "New York City", "Wellington", "Buenos Aires", "Dallas", "Ankara", "Paris"],
+                "description": "City the market resolves on"
+              },
+              "threshold_celsius": {
+                "type": "number",
+                "description": "Temperature threshold in Celsius (provide this or threshold_fahrenheit)"
+              },
+              "threshold_fahrenheit": {
+                "type": "number",
+                "description": "Temperature threshold in Fahrenheit (provide this or threshold_celsius)"
+              },
+              "condition": {
+                "type": "string",
+                "enum": ["above", "below", "exact"],
+                "description": "Whether market resolves YES if temp is above, below, or exact"
+              },
+              "end_date": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "description": "Market resolution date in YYYY-MM-DD format"
+              },
+              "outcomes": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2,
+                "description": "Exactly [YES, NO] outcomes with current market probabilities",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "title": { "type": "string" },
+                    "probability": { "type": "number", "minimum": 0, "maximum": 1 }
+                  },
+                  "required": ["title", "probability"]
+                }
+              }
+            },
+            "required": ["id", "question", "city", "condition", "end_date", "outcomes"]
+          }
+        },
+        "required": ["market"]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "market_id": { "type": "string" },
+          "signal": { "type": "string", "enum": ["BUY_YES", "BUY_NO", "NO_EDGE"] },
+          "confidence": { "type": "number" },
+          "edge": { "type": "number" },
+          "forecast": { "type": "object" },
+          "edge_breakdown": {
+            "type": "object",
+            "properties": {
+              "market_yes_prob": { "type": "number" },
+              "model_yes_prob": { "type": "number" },
+              "edge": { "type": "number" },
+              "threshold_temperature": { "type": "number" },
+              "forecast_temperature": { "type": "number" }
+            }
+          },
+          "processing_time_ms": { "type": "number" }
+        }
+      }
+    }
+  ],
+  "contact_email": "",
+  "legal_info_url": "https://weather-signal.up.railway.app/health"
+}
