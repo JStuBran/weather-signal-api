@@ -423,3 +423,9 @@ async def signal(body: SignalRequest):
     except Exception as exc:
         logger.error("Signal error: %s", exc)
         return JSONResponse(status_code=500, content={"detail": str(exc)})
+
+
+if __name__ == "__main__":
+    import uvicorn
+    import os
+    uvicorn.run("main:app", host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
